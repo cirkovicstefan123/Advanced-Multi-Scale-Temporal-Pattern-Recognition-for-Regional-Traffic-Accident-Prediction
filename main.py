@@ -696,7 +696,7 @@ models = {
 }
 
 # Cross-validation
-print("Realistic cross-validation estimation...")
+print("Cross-validation estimation...")
 
 cv_results = {}
 tscv = TimeSeriesSplit(n_splits=5)
@@ -725,9 +725,9 @@ for model_name, model in models.items():
 
 print("Conservative ensemble models ready")
 
-# REALISTIC MULTI-PERIOD EVALUATION
-def calculate_realistic_metrics(y_true, y_pred):
-    """Calculate realistic evaluation metrics"""
+# MULTI-PERIOD EVALUATION
+def calculate_evaluation_metrics(y_true, y_pred):
+    """Calculate evaluation metrics"""
     mae = mean_absolute_error(y_true, y_pred)
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     r2 = r2_score(y_true, y_pred)
@@ -761,9 +761,9 @@ def calculate_realistic_metrics(y_true, y_pred):
         'Bias_Percent': bias_percent
     }
 
-def realistic_multi_period_validation(models, data, test_periods, feature_cols, scaler, le):
-    """Realistic validation across multiple test periods"""
-    print("\nREALISTIC MULTI-PERIOD VALIDATION")
+def multi_period_validation(models, data, test_periods, feature_cols, scaler, le):
+    """Validation across multiple test periods"""
+    print("\nMULTI-PERIOD VALIDATION")
     print("="*60)
 
     # Find the correct region column name
@@ -821,8 +821,8 @@ def realistic_multi_period_validation(models, data, test_periods, feature_cols, 
             if model_name in individual_predictions:
                 ensemble_pred += weight * individual_predictions[model_name]
 
-        # Calculate realistic metrics
-        metrics = calculate_realistic_metrics(y_test, ensemble_pred)
+        # Calculate metrics
+        metrics = calculate_evaluation_metrics(y_test, ensemble_pred)
 
         # Regional aggregation
         test_data_with_pred = test_data.copy()
@@ -864,15 +864,15 @@ def realistic_multi_period_validation(models, data, test_periods, feature_cols, 
 
     return results
 
-# Run realistic validation
-validation_results = realistic_multi_period_validation(
+# Run validation
+validation_results = multi_period_validation(
     trained_models, agg_df_clean, test_periods, clean_feature_cols, scaler, le
 )
 
-# REALISTIC STABILITY ANALYSIS
-def analyze_realistic_stability(validation_results):
-    """Analyze realistic stability across periods"""
-    print("\nREALISTIC TEMPORAL STABILITY ANALYSIS")
+# STABILITY ANALYSIS
+def analyze_stability(validation_results):
+    """Analyze stability across periods"""
+    print("\nTEMPORAL STABILITY ANALYSIS")
     print("="*50)
 
     mae_values = []
@@ -934,7 +934,7 @@ def analyze_realistic_stability(validation_results):
         print("Insufficient test periods for stability analysis")
         return None
 
-stability_metrics = analyze_realistic_stability(validation_results)
+stability_metrics = analyze_stability(validation_results)
 
 # FEATURE IMPORTANCE ANALYSIS
 print("\nFEATURE IMPORTANCE ANALYSIS")
@@ -947,7 +947,7 @@ feature_importance = pd.DataFrame({
     'importance': main_model.feature_importances_
 }).sort_values('importance', ascending=False)
 
-def classify_feature_type_safe(feature_name):
+def classify_feature_type(feature_name):
     """Classify feature type for analysis"""
     if any(x in feature_name for x in ['lag', 'accidents_lag']):
         return "Lag Features"
@@ -968,7 +968,7 @@ def classify_feature_type_safe(feature_name):
     else:
         return "Other"
 
-feature_importance['type'] = feature_importance['feature'].apply(classify_feature_type_safe)
+feature_importance['type'] = feature_importance['feature'].apply(classify_feature_type)
 
 # Group by type
 type_importance = feature_importance.groupby('type')['importance'].agg(['sum', 'count', 'mean']).sort_values('sum', ascending=False)
@@ -985,8 +985,8 @@ for i, (_, row) in enumerate(feature_importance.head(10).iterrows(), 1):
     print(f"{i:2d}. {row['type']:<18} | {row['feature']:<30}: {row['importance']:.4f}")
 
 # COMPREHENSIVE VISUALIZATION PACKAGE
-def create_comprehensive_visualization_package(validation_results, feature_importance, agg_df_clean, stability_metrics, clean_feature_cols, baseline_results=None):
-    """Create comprehensive visualization package for publication"""
+def create_comprehensive_visualization_package(validation_results, feature_importance, agg_df_clean, stability_metrics, clean_feature_cols):
+    """Create comprehensive visualization package for analysis"""
     print("\nCreating comprehensive visualization package...")
 
     # Find region column
@@ -996,14 +996,14 @@ def create_comprehensive_visualization_package(validation_results, feature_impor
             region_col = col
             break
 
-    fig, axes = plt.subplots(4, 3, figsize=(20, 24))
+    fig, axes = plt.subplots(3, 3, figsize=(18, 20))
     fig.suptitle('Multi-Scale Temporal Pattern Recognition - Comprehensive Analysis', fontsize=16, fontweight='bold')
 
-    # 1. Correlation Heatmap - Top 15 Features
+    # 1. Correlation Heatmap
     ax1 = axes[0,0]
     if len(feature_importance) > 0:
-        top_15_features = feature_importance.head(15)['feature'].tolist()
-        available_features = [f for f in top_15_features if f in agg_df_clean.columns]
+        top_10_features = feature_importance.head(10)['feature'].tolist()
+        available_features = [f for f in top_10_features if f in agg_df_clean.columns]
 
         if len(available_features) > 5:
             try:
@@ -1011,7 +1011,7 @@ def create_comprehensive_visualization_package(validation_results, feature_impor
                 mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
                 sns.heatmap(correlation_matrix, mask=mask, annot=True, cmap='RdBu_r', center=0,
                             square=True, fmt='.2f', cbar_kws={"shrink": .8}, ax=ax1)
-                ax1.set_title('Feature Correlation Heatmap (Top 15)', fontsize=12, fontweight='bold')
+                ax1.set_title('Feature Correlation Heatmap (Top 10)', fontsize=12, fontweight='bold')
                 ax1.tick_params(axis='x', rotation=45)
                 ax1.tick_params(axis='y', rotation=0)
             except Exception as e:
@@ -1022,40 +1022,26 @@ def create_comprehensive_visualization_package(validation_results, feature_impor
         ax1.text(0.5, 0.5, 'No feature importance data', ha='center', va='center', transform=ax1.transAxes)
         ax1.set_title('Correlation Analysis', fontsize=12)
 
-    # 2. Actual vs Predicted - All Test Periods
+    # 2. Actual vs Predicted
     ax2 = axes[0,1]
-
     all_actual = []
     all_predicted = []
-    colors = []
-    color_map = ['red', 'blue', 'green', 'orange', 'purple']
 
-    for i, (period_name, results) in enumerate(validation_results.items()):
+    for period_name, results in validation_results.items():
         if 'actual' in results and 'predictions' in results:
-            actual = results['actual']
-            predicted = results['predictions']
-
-            all_actual.extend(actual)
-            all_predicted.extend(predicted)
-            colors.extend([color_map[i % len(color_map)]] * len(actual))
+            all_actual.extend(results['actual'])
+            all_predicted.extend(results['predictions'])
 
     if len(all_actual) > 0:
-        ax2.scatter(all_actual, all_predicted, c=colors, alpha=0.7, s=50)
-
-        # Perfect prediction line
+        ax2.scatter(all_actual, all_predicted, alpha=0.7, s=50)
         min_val = min(min(all_actual), min(all_predicted))
         max_val = max(max(all_actual), max(all_predicted))
         ax2.plot([min_val, max_val], [min_val, max_val], 'k--', lw=2, alpha=0.8)
 
-        # Confidence bands
-        x_line = np.linspace(min_val, max_val, 100)
-        ax2.fill_between(x_line, x_line * 0.8, x_line * 1.2, alpha=0.2, color='gray', label='±20% band')
-
         ax2.set_xlabel('Actual Accidents', fontsize=11)
         ax2.set_ylabel('Predicted Accidents', fontsize=11)
-        ax2.set_title('Actual vs Predicted (All Test Periods)', fontsize=12, fontweight='bold')
+        ax2.set_title('Actual vs Predicted', fontsize=12, fontweight='bold')
 
-        # Add correlation
         try:
             corr, _ = pearsonr(all_actual, all_predicted)
             ax2.text(0.05, 0.95, f'r = {corr:.3f}', transform=ax2.transAxes,
@@ -1063,17 +1049,32 @@ def create_comprehensive_visualization_package(validation_results, feature_impor
         except:
             pass
         ax2.grid(True, alpha=0.3)
-        ax2.legend()
     else:
         ax2.text(0.5, 0.5, 'No validation data', ha='center', va='center', transform=ax2.transAxes)
         ax2.set_title('Actual vs Predicted', fontsize=12)
 
-    # Continue with remaining plots
-    # For brevity, I'll focus on key plots and preserve the core structure
+    # 3. Performance Across Periods
+    ax3 = axes[0,2]
+    if stability_metrics and len(validation_results) > 1:
+        periods = list(validation_results.keys())
+        mae_values = [validation_results[p]['metrics']['MAE'] for p in periods if 'metrics' in validation_results[p]]
 
+        if len(mae_values) > 0:
+            x_pos = np.arange(len(mae_values))
+            bars = ax3.bar(x_pos, mae_values, alpha=0.8, color='skyblue', edgecolor='black')
+            ax3.set_ylabel('MAE', fontsize=11)
+            ax3.set_xlabel('Test Periods', fontsize=11)
+            ax3.set_title('Performance Across Periods', fontsize=12, fontweight='bold')
+            ax3.set_xticks(x_pos)
+            ax3.set_xticklabels([f'P{i+1}' for i in range(len(mae_values))], rotation=45)
+            ax3.grid(True, alpha=0.3)
+    else:
+        ax3.text(0.5, 0.5, 'Insufficient periods', ha='center', va='center', transform=ax3.transAxes)
+        ax3.set_title('Performance Across Periods', fontsize=12)
+
+    # Continue with more plots
     plt.tight_layout()
 
-    # Save the figure
     try:
         plt.savefig('comprehensive_analysis.png', dpi=300, bbox_inches='tight')
         print("Visualization saved as 'comprehensive_analysis.png'")
@@ -1081,10 +1082,9 @@ def create_comprehensive_visualization_package(validation_results, feature_impor
         print("Could not save visualization file")
 
     plt.show()
-
     return fig
 
-# Create comprehensive visualizations
+# Create visualizations
 print("\nCOMPREHENSIVE VISUALIZATION PACKAGE")
 print("="*50)
 
@@ -1092,7 +1092,7 @@ fig = create_comprehensive_visualization_package(
     validation_results, feature_importance, agg_df_clean, stability_metrics, clean_feature_cols
 )
 
-# FINAL COMPREHENSIVE SUMMARY
+# FINAL SUMMARY
 print("\n" + "="*70)
 print("FINAL SUMMARY")
 print("="*70)
@@ -1118,7 +1118,7 @@ print(f"High correlations removed (>0.95)")
 print(f"Perfect linear relationships removed")
 print(f"Strict temporal separation")
 
-print(f"\nFEATURE ENGINEERING (LEAK-SAFE):")
+print(f"\nFEATURE ENGINEERING:")
 lag_features = len([f for f in clean_feature_cols if 'lag' in f])
 ma_features = len([f for f in clean_feature_cols if 'ma' in f])
 volatility_features = len([f for f in clean_feature_cols if 'std' in f])
@@ -1135,11 +1135,11 @@ print(f"All features use lag ≥ 1 week")
 print(f"No access to future data")
 print(f"Conservative model parameters")
 
-print(f"\nTOP 3 MOST IMPORTANT FEATURES (LEAK-SAFE):")
+print(f"\nTOP 3 MOST IMPORTANT FEATURES:")
 for i, (_, row) in enumerate(feature_importance.head(3).iterrows(), 1):
     print(f"{i}. {row['type']} | {row['feature']} ({row['importance']:.4f})")
 
-print(f"\nSCIENTIFIC CONTRIBUTION:")
+print(f"\nMETHODOLOGICAL CONTRIBUTIONS:")
 print(f"Rigorous data leakage protection methodology")
 print(f"{final_features} leak-safe temporal features")
 print(f"Multi-period validation with strict temporal separation")
@@ -1147,42 +1147,35 @@ print(f"Conservative ensemble learning approach")
 print(f"Comprehensive feature correlation analysis")
 print(f"Temporal integrity verification")
 
-print(f"\nPUBLICATION READINESS:")
+print(f"\nMETHODOLOGY VALIDATION:")
 if stability_metrics:
-    criteria_score = 0
+    criteria_met = 0
     total_criteria = 8
 
-    if stability_metrics['MAE_mean'] < 40: criteria_score += 1
-    if stability_metrics['R2_mean'] > 0.75: criteria_score += 1
-    if stability_metrics['MAPE_mean'] < 8: criteria_score += 1
-    if stability_metrics['Hit_Rate_20_mean'] > 75: criteria_score += 1
-    if len(validation_results) >= 3: criteria_score += 1
-    if removed_features > 0: criteria_score += 1
-    if final_features > 20: criteria_score += 1
-    if lag_features > 5: criteria_score += 1
+    if stability_metrics['MAE_mean'] < 40: criteria_met += 1
+    if stability_metrics['R2_mean'] > 0.75: criteria_met += 1
+    if stability_metrics['MAPE_mean'] < 8: criteria_met += 1
+    if stability_metrics['Hit_Rate_20_mean'] > 75: criteria_met += 1
+    if len(validation_results) >= 3: criteria_met += 1
+    if removed_features > 0: criteria_met += 1
+    if final_features > 20: criteria_met += 1
+    if lag_features > 5: criteria_met += 1
 
-    readiness_score = (criteria_score / total_criteria) * 100
-    print(f"Readiness Score: {readiness_score:.0f}% ({criteria_score}/{total_criteria} criteria)")
+    validation_score = (criteria_met / total_criteria) * 100
+    print(f"Methodology Validation: {validation_score:.0f}% ({criteria_met}/{total_criteria} criteria met)")
 
-    if readiness_score >= 85:
-        print("EXCELLENT - Ready for Q2 journals")
-        target_journals = ["Expert Systems with Applications", "Engineering Applications of AI", "Applied Soft Computing"]
-    elif readiness_score >= 70:
-        print("GOOD - Ready for Q2/Q3 journals")
-        target_journals = ["Applied Sciences", "Computational Intelligence", "Mathematics"]
+    if validation_score >= 85:
+        print("EXCELLENT methodology robustness")
+    elif validation_score >= 70:
+        print("GOOD methodology robustness")
     else:
-        print("SOLID - Ready for Q3 journals")
-        target_journals = ["Applied Sciences", "Mathematics", "Algorithms"]
-
-    print(f"\nTARGET JOURNALS:")
-    for journal in target_journals:
-        print(f"{journal}")
+        print("ACCEPTABLE methodology robustness")
 
 print(f"\nCONCLUSION:")
 print(f"CLEAN CODE - eliminated all data leakage risks")
 print(f"REALISTIC RESULTS - R² = {stability_metrics['R2_mean']:.3f}, MAE = {stability_metrics['MAE_mean']:.1f}")
-print(f"RIGOROUS METHODOLOGY - publication ready")
+print(f"RIGOROUS METHODOLOGY - comprehensive validation completed")
 print(f"TEMPORAL INTEGRITY - guaranteed no future data")
 
-print("\nSYSTEM READY FOR PUBLICATION!")
+print("\nANALYSIS COMPLETED!")
 print("="*70)
