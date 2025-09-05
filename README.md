@@ -5,4 +5,7 @@ Advanced Multi-Scale Temporal Pattern Recognition for Regional Traffic Accident 
 
 <img width="1750" height="526" alt="image" src="https://github.com/user-attachments/assets/bd7f29ad-d376-4aac-8cd1-8a1b4e185e43" />
 
+<img width="936" height="670" alt="image" src="https://github.com/user-attachments/assets/ecbda774-a1fe-4a10-9337-22c39cf3246d" />
+
+
 
